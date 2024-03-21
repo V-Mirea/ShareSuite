@@ -10,6 +10,7 @@ using UnityEngine.Networking;
 using Random = UnityEngine.Random;
 using EntityStates.Scrapper;
 using ShareSuite.Networking;
+using BepInEx.Logging;
 
 namespace ShareSuite
 {
@@ -202,6 +203,11 @@ namespace ShareSuite
                     // Otherwise give everyone the same item
                     else
                     {
+                        if (GeneralHooks.CommandArtifactIsEnabled())
+                        {
+                            item = PickupCatalog.GetPickupDef(PickupCatalog.FindPickupIndex("ItemIndex.ScrapWhite"));
+                        }
+
                         HandleGiveItem(player, item);
                     }
                 }

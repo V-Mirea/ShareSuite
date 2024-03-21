@@ -2,6 +2,7 @@ using System;
 using RoR2;
 using System.Collections.Generic;
 using UnityEngine;
+using static RoR2.RoR2Content;
 
 namespace ShareSuite
 {
@@ -86,6 +87,11 @@ namespace ShareSuite
         {
             // Check whether the quantity of players in the lobby exceeds one.
             return ShareSuite.OverrideMultiplayerCheck.Value || PlayerCharacterMasterController.instances.Count > 1;
+        }
+
+        public static bool CommandArtifactIsEnabled()
+        {
+            return RunArtifactManager.instance.IsArtifactEnabled(Artifacts.Command);
         }
 
         private static void InteractibleCreditOverride(On.RoR2.SceneDirector.orig_PlaceTeleporter orig,
