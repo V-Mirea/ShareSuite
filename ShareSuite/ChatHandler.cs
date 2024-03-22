@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using RoR2;
 using UnityEngine;
@@ -135,6 +136,25 @@ namespace ShareSuite
                 $"<color=#{ColorUtility.ToHtmlStringRGB(pickupColor)}>" +
                 $"{(string.IsNullOrEmpty(pickupName) ? "???" : pickupName)} ({itemCount})</color><color=#{GrayColor}>.</color>";
             Chat.SendBroadcastChat(new Chat.SimpleChatMessage { baseToken = pickupMessage });
+        }
+
+        public static void SendRichItemScrapPickupMessage(CharacterMaster origPlayer, PickupDef origPickup, PickupDef scrapDef)
+        {
+            var playerItemDict = new Dictionary<CharacterMaster, PickupDef>()
+            {
+                {origPlayer , origPickup}
+            };
+
+            foreach (var player in PlayerCharacterMasterController.instances
+                             .Select(p => p.master))
+            {
+                if (player.GetInstanceID() != origPlayer.GetInstanceID())
+                {
+                    playerItemDict.Add(player, scrapDef);
+                }
+            }
+
+            SendRichRandomizedPickupMessage(origPlayer, origPickup, playerItemDict);
         }
 
         public static void SendRichRandomizedPickupMessage(CharacterMaster origPlayer, PickupDef origPickup,

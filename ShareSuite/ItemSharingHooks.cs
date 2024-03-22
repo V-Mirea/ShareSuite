@@ -103,21 +103,7 @@ namespace ShareSuite
                 var itemDef = ItemCatalog.GetItemDef(scrapperController.lastScrappedItemIndex);
                 if (itemDef != null)
                 {
-                    switch (itemDef.tier)
-                    {
-                        case ItemTier.Tier1:
-                            pickupIndex = PickupCatalog.FindPickupIndex("ItemIndex.ScrapWhite");
-                            break;
-                        case ItemTier.Tier2:
-                            pickupIndex = PickupCatalog.FindPickupIndex("ItemIndex.ScrapGreen");
-                            break;
-                        case ItemTier.Tier3:
-                            pickupIndex = PickupCatalog.FindPickupIndex("ItemIndex.ScrapRed");
-                            break;
-                        case ItemTier.Boss:
-                            pickupIndex = PickupCatalog.FindPickupIndex("ItemIndex.ScrapYellow");
-                            break;
-                    }
+                    pickupIndex = GetScrapIndexBasedOnItemTier(itemDef.tier);
                 }
 
                 if (pickupIndex == PickupIndex.none) return;
@@ -143,6 +129,7 @@ namespace ShareSuite
         {
             var item = PickupCatalog.GetPickupDef(self.pickupIndex);
             var itemDef = ItemCatalog.GetItemDef(item.itemIndex);
+            PickupDef scrapDef = PickupCatalog.GetPickupDef(PickupIndex.none);
             var randomizedPlayerDict = new Dictionary<CharacterMaster, PickupDef>();
 
             // If the player is dead, they might not have a body. The game uses inventory.GetComponent, avoiding the issue entirely.
@@ -203,12 +190,15 @@ namespace ShareSuite
                     // Otherwise give everyone the same item
                     else
                     {
-                        if (GeneralHooks.CommandArtifactIsEnabled())
+                        if (GeneralHooks.CommandArtifactIsEnabled()) // TODO: add feature toggle to config
                         {
-                            item = PickupCatalog.GetPickupDef(PickupCatalog.FindPickupIndex("ItemIndex.ScrapWhite"));
-                        }
-
-                        HandleGiveItem(player, item);
+                            PickupIndex scrapIndex = GetScrapIndexBasedOnItemTier(itemDef.tier);
+                            scrapDef = PickupCatalog.GetPickupDef(scrapIndex);
+                            HandleGiveItem(player, scrapDef);
+                        } else
+                        {
+                            HandleGiveItem(player, item);
+                        }                     
                     }
                 }
 
@@ -222,8 +212,14 @@ namespace ShareSuite
 
             orig(self, body);
 
-            ChatHandler.SendRichPickupMessage(master, item);
-
+            if (!ShareSuite.RandomizeSharedPickups.Value && GeneralHooks.CommandArtifactIsEnabled()) // TODO: check this conditional
+            {
+                ChatHandler.SendRichItemScrapPickupMessage(master, item, scrapDef);
+            } else
+            {
+                ChatHandler.SendRichPickupMessage(master, item);
+            }
+            
             // ReSharper disable once PossibleNullReferenceException
             HandleRichMessageUnlockAndNotification(master, item.pickupIndex);
         }
@@ -508,6 +504,31 @@ namespace ShareSuite
             if (Blacklist.HasItem(pickupDef.itemIndex))
                 return null;
             return orDefault;
+        }
+
+        private static PickupIndex GetScrapIndexBasedOnItemTier(ItemTier itemTier)
+        {
+            PickupIndex scrapIndex;
+            switch (itemTier)
+            {
+                case ItemTier.Tier1:
+                    scrapIndex = PickupCatalog.FindPickupIndex("ItemIndex.ScrapWhite");
+                    break;
+                case ItemTier.Tier2:
+                    scrapIndex = PickupCatalog.FindPickupIndex("ItemIndex.ScrapGreen");
+                    break;
+                case ItemTier.Tier3:
+                    scrapIndex = PickupCatalog.FindPickupIndex("ItemIndex.ScrapRed");
+                    break;
+                case ItemTier.Boss:
+                    scrapIndex = PickupCatalog.FindPickupIndex("ItemIndex.ScrapYellow");
+                    break;
+                default:
+                    scrapIndex = PickupIndex.none; // TODO: handle what happens if different tier
+                    break;
+            }
+
+            return scrapIndex;
         }
 
         internal static object GetInstanceField(Type type, object instance, string fieldName)
