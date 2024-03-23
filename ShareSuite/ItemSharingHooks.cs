@@ -17,6 +17,7 @@ namespace ShareSuite
     public static class ItemSharingHooks
     {
         private static bool _itemLock = false;
+        private static int _printerEssenceOnGround = 0;
 
         private static readonly List<CostTypeIndex> PrinterCosts = new List<CostTypeIndex>
         {
@@ -135,12 +136,20 @@ namespace ShareSuite
             // If the player is dead, they might not have a body. The game uses inventory.GetComponent, avoiding the issue entirely.
             var master = body?.master ?? body.inventory?.GetComponent<CharacterMaster>();
 
-            if (!Blacklist.HasItem(item.itemIndex)
+            if (_printerEssenceOnGround > 0)
+            { //TODO: make check on per-player, per-tier basis
+                _printerEssenceOnGround--;
+                ShareSuite.Log.LogInfo($"Printer essense detected, not granting items to other players. Printer essense on ground now: {_printerEssenceOnGround}");
+                orig(self, body);
+                return;
+            }
+            else if (!Blacklist.HasItem(item.itemIndex)
                 && NetworkServer.active
                 && IsValidItemPickup(self.pickupIndex)
                 && IsValidPickupObject(self, body)
                 && GeneralHooks.IsMultiplayer())
             {
+                ShareSuite.Log.LogInfo($"Granting item, no essense on ground detected");
                 if (ShareSuite.RandomizeSharedPickups.Value)
                 {
                     randomizedPlayerDict.Add(master, item);
@@ -271,7 +280,7 @@ namespace ShareSuite
             {
                 orig(self);
             }
-            else if (!ShareSuite.PrinterCauldronFixEnabled.Value && PrinterCosts.Contains(costType))
+            else if ((!ShareSuite.PrinterCauldronFixEnabled.Value || GeneralHooks.CommandArtifactIsEnabled()) && PrinterCosts.Contains(costType))
             {
                 orig(self);
             }
@@ -280,6 +289,8 @@ namespace ShareSuite
         private static void OnShopPurchase(On.RoR2.PurchaseInteraction.orig_OnInteractionBegin orig,
             PurchaseInteraction self, Interactor activator)
         {
+            ShareSuite.Log.LogInfo($"Printer fix enabled: {ShareSuite.PrinterCauldronFixEnabled.Value}; Cost type: {self.costType}");
+
             if (!self.CanBeAffordedByInteractor(activator)) return;
 
             if (!GeneralHooks.IsMultiplayer())
@@ -305,13 +316,19 @@ namespace ShareSuite
                     var characterBody = activator.GetComponent<CharacterBody>();
                     var inventory = characterBody.inventory;
 
-
                     var item = PickupCatalog.GetPickupDef(shop.CurrentPickupIndex())?.itemIndex;
 
                     if (item == null) MonoBehaviour.print("ShareSuite: PickupCatalog is null.");
                     else
                     {
-                        HandleGiveItem(characterBody.master, PickupCatalog.GetPickupDef(shop.CurrentPickupIndex()));
+                        if (GeneralHooks.CommandArtifactIsEnabled())
+                        {
+                            ShareSuite.Log.LogInfo($"PrinterCauldronFix is on but we are forcing item to drop and incrementing counter: {_printerEssenceOnGround}");
+                            _printerEssenceOnGround++;
+                        } else
+                        {
+                            HandleGiveItem(characterBody.master, PickupCatalog.GetPickupDef(shop.CurrentPickupIndex()));
+                        }                      
                     }
 
                     orig(self, activator);

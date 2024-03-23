@@ -109,6 +109,13 @@ namespace ShareSuite
 
             var stageInfo = SceneInfo.instance.GetComponent<ClassicStageInfo>();
 
+            ShareSuite.Log.LogInfo("Overriding interactable credits");
+            ShareSuite.Log.LogInfo("Director spawn choices: ");
+            foreach(var card in stageInfo.interactableCards)
+            {
+                ShareSuite.Log.LogInfo(card.spawnCard.name);
+            }
+
             if (stageInfo)
             {
                 // Overwrite our base value with the actual amount of director credits.
